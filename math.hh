@@ -84,6 +84,12 @@ namespace Volk {
 
             static constexpr Vec3 cross(const Vec3& a, const Vec3& b) noexcept { return { a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x }; }
             constexpr Vec3 cross(const Vec3& o) const noexcept { return cross(*this, o); }
+
+            [[nodiscard]] Vec3 normalize() const noexcept {
+                const T len = length();
+                if (len > T(0)) return *this / len;
+                return { T(0), T(0), T(0) };
+            }
         };
 
         template <std::floating_point T>
@@ -92,12 +98,156 @@ namespace Volk {
             T y{};
             T z{};
             T w{};
+
+            [[nodiscard]] constexpr Vec4 operator*(const Vec4& b) const noexcept {
+                return {
+                    w * b.x + x * b.w + y * b.z - z * b.y,
+                    w * b.y - x * b.z + y * b.w + z * b.x,
+                    w * b.z + x * b.y - y * b.x + z * b.w,
+                    w * b.w - x * b.x - y * b.y - z * b.z
+                };
+            }
+
+            [[nodiscard]] constexpr Vec4 conjugate() const noexcept {
+                return { -x, -y, -z,  w };
+            }
+
+            [[nodiscard]] constexpr Vec3<T> rotate(const Vec3<T>& v) const noexcept {
+                const Vec3<T> u{ x,y,z };
+                const T s = w;
+                const Vec3<T> t = u.cross(v) * T(2);
+                return v + t * s + u.cross(t);
+            }
+
+            [[nodiscard]] constexpr Vec3<T> rotate_inv(const Vec3<T>& v) const noexcept {
+                const Vec3<T> u{ x,y,z };
+                const T s = w;
+                const Vec3<T> t = u.cross(v) * T(2);
+                return v - t * s + u.cross(t);
+            }
         };
 
-        template <class T>
-        struct Matrix4x4 {
-            T m[4][4]{};
+        template <std::floating_point T>
+        struct Mat3x3 {
+            Vec3<T> column0{};
+            Vec3<T> column1{};
+            Vec3<T> column2{};
+
+            constexpr Mat3x3(const Vec3<T>& c0, const Vec3<T>& c1, const Vec3<T>& c2) noexcept : column0(c0), column1(c1), column2(c2) {}
+
+            constexpr Mat3x3(const Vec4<T>& q) noexcept {
+                const T x = q.x, y = q.y, z = q.z, w = q.w;
+                const T x2 = x + x, y2 = y + y, z2 = z + z;
+
+                const T xx = x2 * x, yy = y2 * y, zz = z2 * z;
+                const T xy = x2 * y, xz = x2 * z, xw = x2 * w;
+                const T yz = y2 * z, yw = y2 * w, zw = z2 * w;
+
+                column0 = { T(1) - yy - zz, xy + zw, xz - yw };
+                column1 = { xy - zw, T(1) - xx - zz, yz + xw };
+                column2 = { xz + yw, yz - xw, T(1) - xx - yy };
+            }
+
+            [[nodiscard]] constexpr Mat3x3 get_transpose() const noexcept {
+                return {
+                    { column0.x, column1.x, column2.x },
+                    { column0.y, column1.y, column2.y },
+                    { column0.z, column1.z, column2.z }
+                };
+            }
+
+            [[nodiscard]] constexpr Vec3<T> transform(const Vec3<T>& other) const noexcept {
+                return column0 * other.x + column1 * other.y + column2 * other.z;
+            }
+
+            [[nodiscard]] constexpr Mat3x3 operator*(const Mat3x3& rhs) const noexcept {
+                return { transform(rhs.column0), transform(rhs.column1), transform(rhs.column2) };
+            }
         };
+
+        template <std::floating_point T>
+        struct Mat4x4 {
+            Vec4<T> column0{};
+            Vec4<T> column1{};
+            Vec4<T> column2{};
+            Vec4<T> column3{};
+        };
+
+        template <std::floating_point T>
+        struct OrientedScale {
+            Vec3<T> scale{ T(1), T(1), T(1) };
+            Vec4<T> rotation{};
+
+            [[nodiscard]] constexpr Mat3x3<T> to_mat3x3() const noexcept {
+                const Mat3x3<T> rot{ rotation };
+                Mat3x3<T> transpose = rot.get_transpose();
+                transpose.column0 *= scale.x;
+                transpose.column1 *= scale.y;
+                transpose.column2 *= scale.z;
+                return transpose * rot;
+            }
+        };
+
+        template <std::floating_point T>
+        struct Transform {
+            Vec4<T> m_rotation{};
+            Vec3<T> m_position{};
+
+            [[nodiscard]] constexpr Vec3<T> transform_point(const Vec3<T>& point) const noexcept {
+                return m_rotation.rotate(point) + m_position;
+            }
+        };
+
+        namespace Geometry {
+            template <std::floating_point T>
+            struct Triangle {
+                Vec3<T> v0{};
+                Vec3<T> v1{};
+                Vec3<T> v2{};
+
+                [[nodiscard]] constexpr Vec3<T> center() const noexcept {
+                    return (v0 + v1 + v2) / T{ 3 };
+                }
+            };
+
+            template <std::floating_point T>
+            struct AABB {
+                Vec3<T> min{ std::numeric_limits<T>::infinity(), std::numeric_limits<T>::infinity(), std::numeric_limits<T>::infinity() };
+                Vec3<T> max{ -std::numeric_limits<T>::infinity(), -std::numeric_limits<T>::infinity(), -std::numeric_limits<T>::infinity() };
+
+                [[nodiscard]] constexpr Vec3<T> extent() const noexcept { return max - min; }
+
+                constexpr void expand(const Vec3<T>& p) noexcept {
+                    min.x = std::min(min.x, p.x); max.x = std::max(max.x, p.x);
+                    min.y = std::min(min.y, p.y); max.y = std::max(max.y, p.y);
+                    min.z = std::min(min.z, p.z); max.z = std::max(max.z, p.z);
+                }
+
+                [[nodiscard]] bool intersects(const Vec3<T>& origin, const Vec3<T>& dir, T& tmin, T& tmax) const noexcept {
+                    tmin = T(0);
+                    tmax = std::numeric_limits<T>::max();
+
+                    for (int i = 0; i < 3; ++i) {
+                        const T invD = T(1) / (&dir.x)[i];
+                        T t0 = ((&min.x)[i] - (&origin.x)[i]) * invD;
+                        T t1 = ((&max.x)[i] - (&origin.x)[i]) * invD;
+                        if (invD < T(0)) std::swap(t0, t1);
+
+                        tmin = t0 > tmin ? t0 : tmin;
+                        tmax = t1 < tmax ? t1 : tmax;
+                        if (tmax <= tmin) return false;
+                    }
+                    return true;
+                }
+
+                [[nodiscard]] constexpr int longest_axis() const noexcept {
+                    const auto e = extent();
+                    const std::array<T, 3> a{ e.x, e.y, e.z };
+                    const auto it = std::max_element(a.begin(), a.end());
+                    return static_cast<int>(it - a.begin());
+                }
+            };
+        }
 
         namespace Angle {
             template <class T>
