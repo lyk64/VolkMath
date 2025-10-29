@@ -62,6 +62,9 @@ namespace Volk {
             [[nodiscard]] constexpr Vec3 operator-(const Vec3& other) const noexcept { return { x - other.x, y - other.y, z - other.z }; }
             constexpr Vec3& operator-=(const Vec3& other) noexcept { x -= other.x; y -= other.y; z -= other.z; return *this; }
 
+            [[nodiscard]] constexpr Vec3 operator*(const Vec3& other) const noexcept { return { x * other.x, y * other.y, z * other.z }; }
+            constexpr Vec3& operator*=(const Vec3& other) noexcept { x *= other.x; y *= other.y; z *= other.z; return *this; }
+
             [[nodiscard]] constexpr Vec3 operator*(T scalar) const noexcept { return { x * scalar, y * scalar, z * scalar }; }
             constexpr Vec3& operator*=(T scalar) noexcept { x *= scalar; y *= scalar; z *= scalar; return *this; }
 
