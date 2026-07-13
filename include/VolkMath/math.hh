@@ -102,6 +102,28 @@ namespace Volk {
             T z{};
             T w{};
 
+            constexpr Vec4() noexcept = default;
+            constexpr Vec4(T x_, T y_, T z_, T w_) noexcept : x(x_), y(y_), z(z_), w(w_) {}
+
+            [[nodiscard]] constexpr bool operator==(const Vec4&) const noexcept = default;
+
+            [[nodiscard]] constexpr Vec4 operator-() const noexcept { return { -x, -y, -z, -w }; }
+
+            [[nodiscard]] constexpr Vec4 operator+(const Vec4& o) const noexcept { return { x + o.x, y + o.y, z + o.z, w + o.w }; }
+            constexpr Vec4& operator+=(const Vec4& o) noexcept { x += o.x; y += o.y; z += o.z; w += o.w; return *this; }
+
+            [[nodiscard]] constexpr Vec4 operator-(const Vec4& o) const noexcept { return { x - o.x, y - o.y, z - o.z, w - o.w }; }
+            constexpr Vec4& operator-=(const Vec4& o) noexcept { x -= o.x; y -= o.y; z -= o.z; w -= o.w; return *this; }
+
+            [[nodiscard]] constexpr Vec4 operator*(T scalar) const noexcept { return { x * scalar, y * scalar, z * scalar, w * scalar }; }
+            constexpr Vec4& operator*=(T scalar) noexcept { x *= scalar; y *= scalar; z *= scalar; w *= scalar; return *this; }
+
+            [[nodiscard]] constexpr Vec4 operator/(T scalar) const noexcept { return { x / scalar, y / scalar, z / scalar, w / scalar }; }
+            constexpr Vec4& operator/=(T scalar) noexcept { x /= scalar; y /= scalar; z /= scalar; w /= scalar; return *this; }
+
+            [[nodiscard]] T& operator[](std::size_t i) { assert(i < 4); return *(&x + i); }
+            [[nodiscard]] const T& operator[](std::size_t i) const { assert(i < 4); return *(&x + i); }
+
             [[nodiscard]] constexpr Vec4 operator*(const Vec4& b) const noexcept {
                 return {
                     w * b.x + x * b.w + y * b.z - z * b.y,
@@ -174,6 +196,10 @@ namespace Volk {
             Vec4<T> column1{};
             Vec4<T> column2{};
             Vec4<T> column3{};
+
+            [[nodiscard]] constexpr Vec4<T> transform_point(const Vec3<T>& p) const noexcept {
+                return column0 * p.x + column1 * p.y + column2 * p.z + column3;
+            }
         };
 
         template <std::floating_point T>
