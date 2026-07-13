@@ -221,14 +221,14 @@ namespace Volk {
                 [[nodiscard]] constexpr Vec3<T> extent() const noexcept { return max - min; }
 
                 constexpr void expand(const Vec3<T>& p) noexcept {
-                    min.x = std::min(min.x, p.x); max.x = std::max(max.x, p.x);
-                    min.y = std::min(min.y, p.y); max.y = std::max(max.y, p.y);
-                    min.z = std::min(min.z, p.z); max.z = std::max(max.z, p.z);
+                    min.x = (std::min)(min.x, p.x); max.x = (std::max)(max.x, p.x);
+                    min.y = (std::min)(min.y, p.y); max.y = (std::max)(max.y, p.y);
+                    min.z = (std::min)(min.z, p.z); max.z = (std::max)(max.z, p.z);
                 }
 
                 [[nodiscard]] bool intersects(const Vec3<T>& origin, const Vec3<T>& dir, T& tmin, T& tmax) const noexcept {
                     tmin = T(0);
-                    tmax = std::numeric_limits<T>::max();
+                    tmax = (std::numeric_limits<T>::max)();
 
                     for (int i = 0; i < 3; ++i) {
                         const T invD = T(1) / (&dir.x)[i];
