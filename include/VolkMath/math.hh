@@ -127,6 +127,16 @@ struct Vec4 {
     [[nodiscard]] T& operator[](std::size_t i) { assert(i < 4); return *(&x + i); }
     [[nodiscard]] const T& operator[](std::size_t i) const { assert(i < 4); return *(&x + i); }
 
+    [[nodiscard]] constexpr T length_squared() const noexcept { return x * x + y * y + z * z + w * w; }
+    [[nodiscard]] T length() const noexcept { return std::sqrt(length_squared()); }
+
+    [[nodiscard]] constexpr bool is_zero() const noexcept { return *this == Vec4{}; }
+
+    [[nodiscard]] bool is_nan() const noexcept { return std::isnan(x) || std::isnan(y) || std::isnan(z) || std::isnan(w); }
+
+    static constexpr T dot(const Vec4& a, const Vec4& b) noexcept { return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w; }
+    constexpr T dot(const Vec4& o) const noexcept { return dot(*this, o); }
+
     [[nodiscard]] constexpr Vec4 operator*(const Vec4& b) const noexcept {
         return {
             w * b.x + x * b.w + y * b.z - z * b.y,
@@ -233,6 +243,9 @@ struct Transform {
 using Vec2f = Vec2<float>;
 using Vec3f = Vec3<float>;
 using Vec4f = Vec4<float>;
+using Vec2d = Vec2<double>;
+using Vec3d = Vec3<double>;
+using Vec4d = Vec4<double>;
 using Mat3x3f = Mat3x3<float>;
 using Mat4x4f = Mat4x4<float>;
 
