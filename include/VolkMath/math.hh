@@ -8,6 +8,8 @@
 #include <cstddef>
 #include <limits>
 #include <numbers>
+#include <optional>
+#include <type_traits>
 #include <utility>
 
 namespace volk::math {
@@ -372,5 +374,18 @@ constexpr Vec2<T>& normalize_angles(Vec2<T>& vector) noexcept {
 }
 
 } // namespace angle
+
+namespace projection {
+
+template <std::floating_point T>
+[[nodiscard]] constexpr std::optional<Vec2<T>> world_to_screen(const Mat4x4<T>& view_projection, const Vec3<T>& world, const Vec2<T>& viewport, std::type_identity_t<T> min_w = T{ 0.001 }) noexcept {
+    const Vec4<T> clip = view_projection.transform_point(world);
+    if (!(clip.w >= min_w)) return std::nullopt;
+
+    const Vec2<T> half = viewport * T{ 0.5 };
+    return Vec2<T>{ half.x + half.x * clip.x / clip.w, half.y - half.y * clip.y / clip.w };
+}
+
+} // namespace projection
 
 } // namespace volk::math
