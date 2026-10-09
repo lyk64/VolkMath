@@ -14,6 +14,12 @@
 
 namespace volk::math {
 
+template <class V, class T>
+concept vec2_like = requires(const V& v) {
+    { v.x } -> std::convertible_to<T>;
+    { v.y } -> std::convertible_to<T>;
+};
+
 template <std::floating_point T>
 struct Vec2 {
     T x{};
@@ -21,6 +27,11 @@ struct Vec2 {
 
     constexpr Vec2() noexcept = default;
     constexpr Vec2(T x_, T y_) noexcept : x(x_), y(y_) {}
+
+    template <vec2_like<T> V>
+        requires (!requires(const V& v) { v.z; })
+    constexpr explicit(!std::is_same_v<std::remove_cvref_t<decltype(std::declval<const V&>().x)>, T>)
+    Vec2(const V& v) noexcept : x(static_cast<T>(v.x)), y(static_cast<T>(v.y)) {}
 
     [[nodiscard]] constexpr bool operator==(const Vec2&) const noexcept = default;
 
@@ -377,12 +388,12 @@ constexpr Vec2<T>& normalize_angles(Vec2<T>& vector) noexcept {
 
 namespace projection {
 
-template <std::floating_point T>
-[[nodiscard]] constexpr std::optional<Vec2<T>> world_to_screen(const Mat4x4<T>& view_projection, const Vec3<T>& world, const Vec2<T>& viewport, std::type_identity_t<T> min_w = T{ 0.001 }) noexcept {
+template <std::floating_point T, vec2_like<T> Viewport>
+[[nodiscard]] constexpr std::optional<Vec2<T>> world_to_screen(const Mat4x4<T>& view_projection, const Vec3<T>& world, const Viewport& viewport, std::type_identity_t<T> min_w = T{ 0.001 }) noexcept {
     const Vec4<T> clip = view_projection.transform_point(world);
     if (!(clip.w >= min_w)) return std::nullopt;
 
-    const Vec2<T> half = viewport * T{ 0.5 };
+    const Vec2<T> half{ static_cast<T>(viewport.x) * T{ 0.5 }, static_cast<T>(viewport.y) * T{ 0.5 } };
     return Vec2<T>{ half.x + half.x * clip.x / clip.w, half.y - half.y * clip.y / clip.w };
 }
 
